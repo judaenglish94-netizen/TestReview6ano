@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quiz Interativo de Inglês - Colégio Ideal</title>
 
-  <!-- Supabase Client via CDN (carregado com defer) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase Client via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root {
@@ -56,11 +56,13 @@
     }
 
     .logo-container {
-      width: 120px;
-      height: 120px;
+      width: 110px;
+      height: 110px;
       margin: 0 auto 12px;
-      background: transparent;
-      padding: 0;
+      background: #FFFFFF;
+      padding: 8px;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -70,8 +72,6 @@
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
     }
 
     .main-title {
@@ -101,7 +101,7 @@
     }
 
     .page-active {
-      display: block;
+      display: block !important;
       animation: fadeIn 0.3s ease-in-out;
     }
 
@@ -454,7 +454,7 @@
     <!-- LOGO DO COLÉGIO IDEAL -->
     <header class="app-header">
       <div class="logo-container">
-        <img src="images.png" alt="Colégio Ideal Logo" class="logo-img">
+        <img src="images.png" alt="Colégio Ideal Logo" class="logo-img" onerror="this.style.display='none'">
       </div>
       <h1 class="main-title">Quiz de Língua Inglesa</h1>
       <p class="subtitle">Colégio Ideal - 6º Ano</p>
@@ -498,7 +498,7 @@
         </div>
       </div>
       <div class="center-btn">
-        <button id="btn-start-quiz" class="btn-primary">Start quiz</button>
+        <button id="btn-start-quiz" class="btn-primary" onclick="goToLogin()">Start quiz</button>
       </div>
     </section>
 
@@ -509,7 +509,7 @@
 
       <div class="form-group">
         <label for="select-class">Turma:</label>
-        <select id="select-class" class="form-control">
+        <select id="select-class" class="form-control" onchange="onClassChange(this.value)">
           <option value="">-- Selecione a Turma --</option>
           <option value="MINNIE">6º Ano - Turma MINNIE (Manhã)</option>
           <option value="MICKEY">6º Ano - Turma MICKEY (Manhã)</option>
@@ -518,7 +518,7 @@
 
       <div class="form-group">
         <label for="select-student">Nome do Aluno:</label>
-        <select id="select-student" class="form-control" disabled>
+        <select id="select-student" class="form-control" disabled onchange="onStudentChange(this.value)">
           <option value="">-- Selecione primeiro a turma --</option>
         </select>
       </div>
@@ -531,7 +531,7 @@
       </div>
 
       <div class="center-btn margin-top">
-        <button id="btn-lets-go" class="btn-primary" disabled>Let's go!</button>
+        <button id="btn-lets-go" class="btn-primary" disabled onclick="startQuiz()">Let's go!</button>
       </div>
     </section>
 
@@ -549,7 +549,7 @@
       <div id="question-container" class="question-box"></div>
 
       <div class="quiz-nav-btns center-btn margin-top">
-        <button id="btn-next-question" class="btn-primary">Próxima Questão &rarr;</button>
+        <button id="btn-next-question" class="btn-primary" onclick="nextQuestion()">Próxima Questão &rarr;</button>
       </div>
     </section>
 
@@ -582,7 +582,7 @@
       </div>
 
       <div class="center-btn margin-top">
-        <button id="btn-go-ranking" class="btn-primary">Ver Ranking Geral &rarr;</button>
+        <button id="btn-go-ranking" class="btn-primary" onclick="goToRanking()">Ver Ranking Geral &rarr;</button>
       </div>
     </section>
 
@@ -609,7 +609,7 @@
       </div>
 
       <div class="center-btn margin-top">
-        <button id="btn-restart-app" class="btn-secondary">Voltar ao Início</button>
+        <button id="btn-restart-app" class="btn-secondary" onclick="location.reload()">Voltar ao Início</button>
       </div>
     </section>
   </div>
@@ -618,16 +618,17 @@
     // SUPABASE CONFIGURATION
     const SUPABASE_URL = 'https://ftpmdpnkgtwjtabjijcw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_yF7zIxVe_jjF_TtBDDpM3A_fgewB7Wu';
-    let supabase = null;
+    let supabaseClient = null;
 
-    function initSupabase() {
-      if (window.supabase && typeof window.supabase.createClient === 'function') {
+    function getSupabase() {
+      if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
         try {
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) {
-          console.warn("Falha ao inicializar Supabase, usando armazenamento local:", e);
+          console.warn("Uso local ativado.");
         }
       }
+      return supabaseClient;
     }
 
     // LISTA OFICIAL DE ALUNOS
@@ -692,7 +693,7 @@
       ]
     };
 
-    // BANCO DE 30 QUESTÕES
+    // QUESTÕES
     const QUESTIONS = [
       { type: "mc", cat: "SP", q: "1. Complete: She _____ (like) chocolate ice cream.", options: ["like", "likes", "liking", "is like"], answer: "likes" },
       { type: "mc", cat: "SP", q: "2. Complete a negativa: He _____ (not/play) soccer on Mondays.", options: ["don't play", "doesn't play", "not play", "doesn't plays"], answer: "doesn't play" },
@@ -737,22 +738,8 @@
     let timerInterval = null;
     let timerSeconds = 0;
 
-    // ELEMENTOS
-    const pageReview = document.getElementById('page-review');
-    const pageLogin = document.getElementById('page-login');
-    const pageQuiz = document.getElementById('page-quiz');
-    const pageReport = document.getElementById('page-report');
-    const pageRanking = document.getElementById('page-ranking');
-
-    const selectClass = document.getElementById('select-class');
-    const selectStudent = document.getElementById('select-student');
-    const btnStartQuiz = document.getElementById('btn-start-quiz');
-    const btnLetsGo = document.getElementById('btn-lets-go');
-    const attemptsBadge = document.getElementById('attempts-badge');
-    const blockedMsg = document.getElementById('blocked-msg');
-
     function switchPage(targetPage) {
-      [pageReview, pageLogin, pageQuiz, pageReport, pageRanking].forEach(p => {
+      document.querySelectorAll('.card').forEach(p => {
         p.classList.remove('page-active');
         p.classList.add('page-hidden');
       });
@@ -760,13 +747,17 @@
       targetPage.classList.add('page-active');
     }
 
-    // EVENTOS DE NAVEGAÇÃO
-    btnStartQuiz.addEventListener('click', () => {
-      switchPage(pageLogin);
-    });
+    function goToLogin() {
+      switchPage(document.getElementById('page-login'));
+    }
 
-    selectClass.addEventListener('change', (e) => {
-      currentClass = e.target.value;
+    function onClassChange(val) {
+      currentClass = val;
+      const selectStudent = document.getElementById('select-student');
+      const btnLetsGo = document.getElementById('btn-lets-go');
+      const attemptsBadge = document.getElementById('attempts-badge');
+      const blockedMsg = document.getElementById('blocked-msg');
+
       selectStudent.innerHTML = '<option value="">-- Selecione o Aluno --</option>';
       btnLetsGo.disabled = true;
       attemptsBadge.innerHTML = '';
@@ -783,16 +774,19 @@
       } else {
         selectStudent.disabled = true;
       }
-    });
+    }
 
-    selectStudent.addEventListener('change', async (e) => {
-      const stIdx = e.target.value;
-      if (stIdx === "") {
+    async function onStudentChange(val) {
+      const btnLetsGo = document.getElementById('btn-lets-go');
+      const attemptsBadge = document.getElementById('attempts-badge');
+      const blockedMsg = document.getElementById('blocked-msg');
+
+      if (val === "") {
         btnLetsGo.disabled = true;
         return;
       }
 
-      currentStudent = STUDENTS_DATA[currentClass][stIdx];
+      currentStudent = STUDENTS_DATA[currentClass][val];
       currentGender = currentStudent.gender;
 
       document.body.className = currentGender === "M" ? "theme-boy" : "theme-girl";
@@ -807,36 +801,14 @@
         blockedMsg.classList.add('hidden');
         btnLetsGo.disabled = false;
       }
-    });
-
-    btnLetsGo.addEventListener('click', () => {
-      startQuiz();
-    });
-
-    document.getElementById('btn-next-question').addEventListener('click', () => {
-      if (currentQuestionIdx < QUESTIONS.length - 1) {
-        currentQuestionIdx++;
-        renderQuestion();
-      } else {
-        finishQuiz();
-      }
-    });
-
-    document.getElementById('btn-go-ranking').addEventListener('click', () => {
-      switchPage(pageRanking);
-      loadRanking();
-    });
-
-    document.getElementById('btn-restart-app').addEventListener('click', () => {
-      location.reload();
-    });
+    }
 
     async function getStudentAttempts(studentName) {
-      initSupabase();
       let count = 0;
-      if (supabase) {
+      const client = getSupabase();
+      if (client) {
         try {
-          const { data, error } = await supabase
+          const { data, error } = await client
             .from('quiz_results')
             .select('id')
             .eq('student_name', studentName);
@@ -844,7 +816,9 @@
         } catch (err) {
           console.warn("Erro no Supabase:", err);
         }
-      } else {
+      }
+      
+      if (count === 0) {
         const history = JSON.parse(localStorage.getItem('quiz_history') || '[]');
         count = history.filter(h => h.student_name === studentName).length;
       }
@@ -852,7 +826,7 @@
     }
 
     function startQuiz() {
-      switchPage(pageQuiz);
+      switchPage(document.getElementById('page-quiz'));
       currentQuestionIdx = 0;
       userAnswers = {};
       timerSeconds = 0;
@@ -868,4 +842,233 @@
         document.getElementById('timer-display').textContent = `${mins}:${secs}`;
       }, 1000);
 
-      render
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q = QUESTIONS[currentQuestionIdx];
+      const container = document.getElementById('question-container');
+      const btnNext = document.getElementById('btn-next-question');
+
+      document.getElementById('question-progress').textContent = `Questão ${currentQuestionIdx + 1} de ${QUESTIONS.length}`;
+      btnNext.textContent = currentQuestionIdx === QUESTIONS.length - 1 ? "Finalizar Quiz 🏁" : "Próxima Questão \u2192";
+
+      container.innerHTML = `<div class="q-title">${q.q}</div>`;
+
+      if (q.type === "mc") {
+        const grid = document.createElement('div');
+        grid.className = 'options-grid';
+        q.options.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = 'option-btn' + (userAnswers[currentQuestionIdx] === opt ? ' selected' : '');
+          btn.textContent = opt;
+          btn.onclick = () => {
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            userAnswers[currentQuestionIdx] = opt;
+          };
+          grid.appendChild(btn);
+        });
+        container.appendChild(grid);
+      } else if (q.type === "scramble") {
+        const dropZone = document.createElement('div');
+        dropZone.className = 'scramble-drop-zone';
+
+        const pool = document.createElement('div');
+        pool.className = 'scramble-pool';
+
+        let currentWords = userAnswers[currentQuestionIdx] ? userAnswers[currentQuestionIdx].split(" ") : [];
+        let remainingWords = [...q.words];
+
+        currentWords.forEach(w => {
+          const idx = remainingWords.indexOf(w);
+          if (idx > -1) remainingWords.splice(idx, 1);
+        });
+
+        const updateScrambleState = () => {
+          const selectedChips = Array.from(dropZone.children).map(c => c.textContent);
+          userAnswers[currentQuestionIdx] = selectedChips.join(" ");
+        };
+
+        const renderChips = () => {
+          dropZone.innerHTML = '';
+          pool.innerHTML = '';
+
+          currentWords.forEach(w => {
+            const chip = document.createElement('span');
+            chip.className = 'word-chip';
+            chip.textContent = w;
+            chip.onclick = () => {
+              currentWords.splice(currentWords.indexOf(w), 1);
+              remainingWords.push(w);
+              updateScrambleState();
+              renderChips();
+            };
+            dropZone.appendChild(chip);
+          });
+
+          remainingWords.forEach(w => {
+            const chip = document.createElement('span');
+            chip.className = 'word-chip';
+            chip.textContent = w;
+            chip.onclick = () => {
+              remainingWords.splice(remainingWords.indexOf(w), 1);
+              currentWords.push(w);
+              updateScrambleState();
+              renderChips();
+            };
+            pool.appendChild(chip);
+          });
+        };
+
+        renderChips();
+        container.appendChild(dropZone);
+        container.appendChild(pool);
+      } else if (q.type === "input") {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'text-input-box';
+        input.placeholder = 'Digite aqui o Object Pronoun...';
+        input.value = userAnswers[currentQuestionIdx] || '';
+        input.oninput = (e) => {
+          userAnswers[currentQuestionIdx] = e.target.value.trim().toLowerCase();
+        };
+        container.appendChild(input);
+      }
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIdx < QUESTIONS.length - 1) {
+        currentQuestionIdx++;
+        renderQuestion();
+      } else {
+        finishQuiz();
+      }
+    }
+
+    async function finishQuiz() {
+      clearInterval(timerInterval);
+
+      let score = 0;
+      let catErrors = { SP: 0, ING: 0, OP: 0 };
+
+      QUESTIONS.forEach((q, idx) => {
+        const uAns = (userAnswers[idx] || "").trim().toLowerCase();
+        const cAns = q.answer.trim().toLowerCase();
+
+        if (uAns === cAns) {
+          score++;
+        } else {
+          catErrors[q.cat]++;
+        }
+      });
+
+      const total = QUESTIONS.length;
+      const percentage = ((score / total) * 100).toFixed(1);
+
+      document.getElementById('report-correct').textContent = score;
+      document.getElementById('report-wrong').textContent = total - score;
+      document.getElementById('report-percent').textContent = `${percentage}%`;
+
+      const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+      const secs = String(timerSeconds % 60).padStart(2, '0');
+      document.getElementById('report-time').textContent = `${mins}:${secs}`;
+
+      const feedbackBox = document.getElementById('feedback-details');
+      feedbackBox.innerHTML = '';
+
+      if (score === 30) {
+        feedbackBox.innerHTML = "<p class='feedback-item'>🌟 <strong>Parabéns!</strong> Você acertou todas as questões com maestria!</p>";
+      } else {
+        if (catErrors.SP > 0) {
+          feedbackBox.innerHTML += `<p class='feedback-item'>📌 <strong>Simple Present (${catErrors.SP} erro(s)):</strong> Preste atenção ao uso de 'does/doesn't' e na regra do '-s' para He/She/It.</p>`;
+        }
+        if (catErrors.ING > 0) {
+          feedbackBox.innerHTML += `<p class='feedback-item'>📌 <strong>Verbos com -ING (${catErrors.ING} erro(s)):</strong> Fique atento à ordem correta do sujeito e do verbo nas frases.</p>`;
+        }
+        if (catErrors.OP > 0) {
+          feedbackBox.innerHTML += `<p class='feedback-item'>📌 <strong>Object Pronouns (${catErrors.OP} erro(s)):</strong> Lembre-se das formas me, him, her, it, us e them após os verbos.</p>`;
+        }
+      }
+
+      const resultPayload = {
+        student_name: currentStudent.name,
+        class_name: currentClass,
+        score: score,
+        total_questions: total,
+        percentage: parseFloat(percentage),
+        time_seconds: timerSeconds
+      };
+
+      const client = getSupabase();
+      if (client) {
+        try {
+          await client.from('quiz_results').insert([resultPayload]);
+        } catch (e) {
+          console.warn("Erro ao enviar para o Supabase:", e);
+        }
+      }
+
+      const localData = JSON.parse(localStorage.getItem('quiz_history') || '[]');
+      localData.push(resultPayload);
+      localStorage.setItem('quiz_history', JSON.stringify(localData));
+
+      switchPage(document.getElementById('page-report'));
+    }
+
+    function goToRanking() {
+      switchPage(document.getElementById('page-ranking'));
+      loadRanking();
+    }
+
+    async function loadRanking() {
+      const tbody = document.getElementById('ranking-tbody');
+      tbody.innerHTML = '<tr><td colspan="5">Carregando classificação...</td></tr>';
+
+      let list = [];
+      const client = getSupabase();
+
+      if (client) {
+        try {
+          const { data, error } = await client
+            .from('quiz_results')
+            .select('*')
+            .order('score', { ascending: false })
+            .order('time_seconds', { ascending: true })
+            .limit(10);
+
+          if (!error && data) list = data;
+        } catch (e) {
+          console.warn("Erro na busca no Supabase:", e);
+        }
+      }
+
+      if (list.length === 0) {
+        const localData = JSON.parse(localStorage.getItem('quiz_history') || '[]');
+        list = localData.sort((a, b) => b.score - a.score || a.time_seconds - b.time_seconds).slice(0, 10);
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Nenhum resultado registrado ainda.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      list.forEach((item, index) => {
+        const mins = String(Math.floor(item.time_seconds / 60)).padStart(2, '0');
+        const secs = String(item.time_seconds % 60).padStart(2, '0');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>#${index + 1}</strong></td>
+          <td>${item.student_name}</td>
+          <td>${item.class_name}</td>
+          <td>${item.score} / ${item.total_questions || 30}</td>
+          <td>${mins}:${secs}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
